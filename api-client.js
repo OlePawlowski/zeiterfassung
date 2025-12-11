@@ -12,9 +12,9 @@ const API_BASE = window.location.origin; // Automatisch: https://ihre-app.vercel
 // ============================================
 
 /**
- * Mitarbeiter anmelden/registrieren
+ * Mitarbeiter anmelden
  */
-async function loginEmployee(name, email) {
+async function loginEmployee(email, password) {
     try {
         const response = await fetch(`${API_BASE}/api/auth`, {
             method: 'POST',
@@ -22,8 +22,8 @@ async function loginEmployee(name, email) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                name: name,
                 email: email,
+                password: password,
                 action: 'login'
             })
         });
@@ -37,6 +37,37 @@ async function loginEmployee(name, email) {
         }
     } catch (error) {
         console.error('Login error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Mitarbeiter registrieren
+ */
+async function registerEmployee(name, email, password) {
+    try {
+        const response = await fetch(`${API_BASE}/api/auth`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                password: password,
+                action: 'register'
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || 'Registrierung fehlgeschlagen');
+        }
+    } catch (error) {
+        console.error('Register error:', error);
         throw error;
     }
 }
@@ -153,6 +184,7 @@ async function deleteEntry(entryId) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         loginEmployee,
+        registerEmployee,
         fetchEntries,
         createEntry,
         updateEntry,
@@ -163,6 +195,7 @@ if (typeof module !== 'undefined' && module.exports) {
 // Oder als globale Funktionen (für direkte Verwendung):
 window.apiClient = {
     loginEmployee,
+    registerEmployee,
     fetchEntries,
     createEntry,
     updateEntry,

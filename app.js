@@ -110,6 +110,42 @@ function setupEventListeners() {
         });
     }
     
+    // Registrierungs-Link
+    const registerLink = document.getElementById('registerLink');
+    if (registerLink) {
+        registerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('registerModal').classList.add('active');
+        });
+    }
+    
+    // Registrierungs-Formular
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleRegister();
+        });
+    }
+    
+    // Registrierungs-Modal schließen
+    const closeRegisterModal = document.getElementById('closeRegisterModal');
+    if (closeRegisterModal) {
+        closeRegisterModal.addEventListener('click', () => {
+            document.getElementById('registerModal').classList.remove('active');
+        });
+    }
+    
+    // Registrierungs-Modal bei Klick außerhalb schließen
+    const registerModal = document.getElementById('registerModal');
+    if (registerModal) {
+        registerModal.addEventListener('click', (e) => {
+            if (e.target === registerModal) {
+                registerModal.classList.remove('active');
+            }
+        });
+    }
+    
     // Logout Button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -180,30 +216,30 @@ function setupEventListeners() {
     
     // Employee Login Handler
     async function handleEmployeeLogin() {
-        const nameInput = document.getElementById('loginName');
         const emailInput = document.getElementById('loginEmail');
+        const passwordInput = document.getElementById('loginPassword');
         
-        if (!nameInput || !emailInput) {
+        if (!emailInput || !passwordInput) {
             alert('Login-Formular nicht gefunden!');
             return;
         }
         
-        const name = nameInput.value.trim();
         const email = emailInput.value.trim();
-        
-        if (!name) {
-            alert('Bitte geben Sie Ihren Namen ein.');
-            return;
-        }
+        const password = passwordInput.value;
         
         if (!email || !email.includes('@')) {
             alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
             return;
         }
         
+        if (!password || password.length < 6) {
+            alert('Bitte geben Sie ein Passwort ein (mindestens 6 Zeichen).');
+            return;
+        }
+        
         try {
             // API Login aufrufen
-            const userData = await window.apiClient.loginEmployee(name, email);
+            const userData = await window.apiClient.loginEmployee(email, password);
             
             // Benutzer-Info speichern
             saveUserName(userData.name);
@@ -218,6 +254,61 @@ function setupEventListeners() {
         } catch (error) {
             console.error('Login error:', error);
             alert('Fehler beim Anmelden: ' + error.message);
+        }
+    }
+    
+    // Registrierungs Handler
+    async function handleRegister() {
+        const nameInput = document.getElementById('registerName');
+        const emailInput = document.getElementById('registerEmail');
+        const passwordInput = document.getElementById('registerPassword');
+        const passwordConfirmInput = document.getElementById('registerPasswordConfirm');
+        
+        if (!nameInput || !emailInput || !passwordInput || !passwordConfirmInput) {
+            alert('Registrierungs-Formular nicht gefunden!');
+            return;
+        }
+        
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        const passwordConfirm = passwordConfirmInput.value;
+        
+        if (!name) {
+            alert('Bitte geben Sie Ihren Namen ein.');
+            return;
+        }
+        
+        if (!email || !email.includes('@')) {
+            alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+            return;
+        }
+        
+        if (!password || password.length < 6) {
+            alert('Das Passwort muss mindestens 6 Zeichen lang sein.');
+            return;
+        }
+        
+        if (password !== passwordConfirm) {
+            alert('Die Passwörter stimmen nicht überein.');
+            return;
+        }
+        
+        try {
+            // API Registrierung aufrufen
+            const userData = await window.apiClient.registerEmployee(name, email, password);
+            
+            // Registrierungs-Modal schließen
+            document.getElementById('registerModal').classList.remove('active');
+            
+            // Login-Formular mit E-Mail vorausfüllen
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').focus();
+            
+            alert('Registrierung erfolgreich! Bitte melden Sie sich jetzt an.');
+        } catch (error) {
+            console.error('Register error:', error);
+            alert('Fehler bei der Registrierung: ' + error.message);
         }
     }
     

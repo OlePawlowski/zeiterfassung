@@ -10,19 +10,22 @@
     <!-- Login Screen für Mitarbeiter -->
     <div id="employeeLoginScreen" class="login-screen">
         <div class="login-container">
-            <h1>Mitarbeiter Login</h1>
-            <p class="login-subtitle">Bitte melden Sie sich an</p>
+            <h1>Login</h1>
+            <p class="login-subtitle">Für Mitarbeiter</p>
             <form id="employeeLoginForm">
                 <div class="form-group">
-                    <label for="loginName">Ihr Name *</label>
-                    <input type="text" id="loginName" name="loginName" placeholder="Max Mustermann" required autofocus>
+                    <label for="loginEmail">Ihre E-Mail-Adresse *</label>
+                    <input type="email" id="loginEmail" name="loginEmail" placeholder="max.mustermann@example.com" required autofocus>
                 </div>
                 <div class="form-group">
-                    <label for="loginEmail">Ihre E-Mail-Adresse *</label>
-                    <input type="email" id="loginEmail" name="loginEmail" placeholder="max.mustermann@example.com" required>
+                    <label for="loginPassword">Passwort *</label>
+                    <input type="password" id="loginPassword" name="loginPassword" placeholder="Passwort eingeben" required>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Anmelden</button>
             </form>
+            <p style="text-align: center; margin-top: 16px; color: var(--text-secondary); font-size: 0.9rem;">
+                Noch kein Konto? <a href="#" id="registerLink" style="color: var(--text-primary); text-decoration: underline;">Registrieren</a>
+            </p>
             <a href="admin.html" class="back-link">Admin-Bereich</a>
         </div>
     </div>
@@ -122,6 +125,37 @@
     </div>
     </div>
 
+    <!-- Registrierungs Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Registrierung</h3>
+                <button class="modal-close" id="closeRegisterModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerName">Ihr Name *</label>
+                        <input type="text" id="registerName" name="registerName" placeholder="Max Mustermann" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Ihre E-Mail-Adresse *</label>
+                        <input type="email" id="registerEmail" name="registerEmail" placeholder="max.mustermann@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Passwort *</label>
+                        <input type="password" id="registerPassword" name="registerPassword" placeholder="Mindestens 6 Zeichen" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">Passwort bestätigen *</label>
+                        <input type="password" id="registerPasswordConfirm" name="registerPasswordConfirm" placeholder="Passwort wiederholen" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Registrieren</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Export Modal -->
     <div id="exportModal" class="modal">
         <div class="modal-content">
@@ -133,11 +167,9 @@
                 <p>Wie möchten Sie die Daten exportieren?</p>
                 <div class="modal-options">
                     <button class="modal-option-btn" id="downloadOption">
-                        <span class="modal-icon">📥</span>
                         <span>Herunterladen</span>
                     </button>
                     <button class="modal-option-btn" id="emailOption">
-                        <span class="modal-icon">✉️</span>
                         <span>An Karim senden</span>
                     </button>
                 </div>

@@ -1,5 +1,6 @@
 // Vercel Serverless Function für Authentifizierung mit MongoDB Atlas
 const { MongoClient } = require('mongodb');
+const bcrypt = require('bcryptjs');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || 'zeiterfassung';
@@ -45,40 +46,78 @@ module.exports = async (req, res) => {
     const collection = db.collection('users');
 
     if (req.method === 'POST') {
-      // Login oder Registrierung
-      const { name, email, action } = req.body;
+      const { name, email, password, action } = req.body;
 
-      if (!name || !email) {
-        return res.status(400).json({ success: false, error: 'Name und E-Mail sind erforderlich' });
-      }
+      if (action === 'register') {
+        // Registrierung
+        if (!name || !email || !password) {
+          return res.status(400).json({ success: false, error: 'Name, E-Mail und Passwort sind erforderlich' });
+        }
 
-      // Prüfen ob Benutzer existiert
-      let user = await collection.findOne({ email: email });
+        if (password.length < 6) {
+          return res.status(400).json({ success: false, error: 'Passwort muss mindestens 6 Zeichen lang sein' });
+        }
 
-      if (action === 'register' || !user) {
+        // Prüfen ob Benutzer bereits existiert
+        const existingUser = await collection.findOne({ email: email });
+        if (existingUser) {
+          return res.status(400).json({ success: false, error: 'Ein Benutzer mit dieser E-Mail existiert bereits' });
+        }
+
+        // Passwort hashen
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         // Neuen Benutzer erstellen
-        user = {
+        const newUser = {
           name: name,
           email: email,
+          password: hashedPassword,
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString()
         };
-        await collection.insertOne(user);
-      } else {
-        // Login - letztes Login aktualisieren
+        await collection.insertOne(newUser);
+
+        res.status(201).json({ 
+          success: true, 
+          data: { 
+            name: newUser.name, 
+            email: newUser.email 
+          } 
+        });
+      } else if (action === 'login') {
+        // Login
+        if (!email || !password) {
+          return res.status(400).json({ success: false, error: 'E-Mail und Passwort sind erforderlich' });
+        }
+
+        // Benutzer finden
+        const user = await collection.findOne({ email: email });
+        if (!user) {
+          return res.status(401).json({ success: false, error: 'Ungültige E-Mail oder Passwort' });
+        }
+
+        // Passwort prüfen
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+          return res.status(401).json({ success: false, error: 'Ungültige E-Mail oder Passwort' });
+        }
+
+        // Letztes Login aktualisieren
         await collection.updateOne(
           { email: email },
           { $set: { lastLogin: new Date().toISOString() } }
         );
-      }
 
-      res.status(200).json({ 
-        success: true, 
-        data: { 
-          name: user.name, 
-          email: user.email 
-        } 
-      });
+        res.status(200).json({ 
+          success: true, 
+          data: { 
+            name: user.name, 
+            email: user.email 
+          } 
+        });
+      } else {
+        return res.status(400).json({ success: false, error: 'Ungültige Aktion. Verwenden Sie "login" oder "register"' });
+      }
     } else {
       res.status(405).json({ success: false, error: 'Method not allowed' });
     }
