@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeiterfassung - Spedition</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen für Mitarbeiter -->
+    <div id="employeeLoginScreen" class="login-screen">
+        <div class="login-container">
+            <h1>👤 Mitarbeiter Login</h1>
+            <p class="login-subtitle">Bitte melden Sie sich an</p>
+            <form id="employeeLoginForm">
+                <div class="form-group">
+                    <label for="loginName">Ihr Name *</label>
+                    <input type="text" id="loginName" name="loginName" placeholder="Max Mustermann" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="loginEmail">Ihre E-Mail-Adresse *</label>
+                    <input type="email" id="loginEmail" name="loginEmail" placeholder="max.mustermann@example.com" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Anmelden</button>
+            </form>
+            <a href="admin.html" class="back-link">🔐 Admin-Bereich</a>
+        </div>
+    </div>
+
+    <!-- Hauptansicht (versteckt bis Login) -->
+    <div id="mainApp" class="main-app hidden">
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>Zeiterfassung</h1>
+                    <p class="subtitle">Digitales Fahrtenbuch</p>
+                </div>
+                <div class="header-actions">
+                    <span class="user-info" id="userInfoDisplay"></span>
+                    <a href="admin.html" class="admin-link" title="Admin-Bereich">🔐 Admin</a>
+                    <button id="logoutBtn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">Abmelden</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="form-section">
+                <h2>Neuer Eintrag</h2>
+                <form id="entryForm">
+                    <div class="form-group">
+                        <label for="datum">Datum *</label>
+                        <input type="date" id="datum" name="datum" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="strecke">Strecke *</label>
+                        <input type="text" id="strecke" name="strecke" placeholder="z.B. Berlin - Hamburg" required>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label>Fahrtart *</label>
+                        <div class="checkbox-container">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="einfach" name="einfach">
+                                <span>Einfach</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hinZurueck" name="hinZurueck">
+                                <span>Hin & zurück</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bemerkung">Bemerkung</label>
+                        <textarea id="bemerkung" name="bemerkung" rows="3" placeholder="Optionale Notizen..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Eintrag hinzufügen</button>
+                        <button type="button" id="clearBtn" class="btn btn-secondary">Formular leeren</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="entries-section">
+                <div class="section-header">
+                    <h2>Einträge</h2>
+                    <div class="action-buttons">
+                        <button id="exportBtn" class="btn btn-outline">Exportieren</button>
+                        <button id="clearAllBtn" class="btn btn-danger">Alle löschen</button>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <label for="filterDate">Nach Datum filtern:</label>
+                    <input type="date" id="filterDate">
+                    <button id="clearFilterBtn" class="btn btn-small">Filter zurücksetzen</button>
+                </div>
+
+                <div id="entriesTable" class="table-container">
+                    <table id="entriesTableContent">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Strecke</th>
+                                <th>Einfach</th>
+                                <th>Hin & zurück</th>
+                                <th>Bemerkung</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entriesBody">
+                            <!-- Einträge werden hier dynamisch eingefügt -->
+                        </tbody>
+                    </table>
+                    <p id="noEntries" class="no-entries">Noch keine Einträge vorhanden.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export-Optionen</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Wie möchten Sie die Daten exportieren?</p>
+                <div class="modal-options">
+                    <button class="modal-option-btn" id="downloadOption">
+                        <span class="modal-icon">📥</span>
+                        <span>Herunterladen</span>
+                    </button>
+                    <button class="modal-option-btn" id="emailOption">
+                        <span class="modal-icon">✉️</span>
+                        <span>An Karim senden</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>E-Mail wird gesendet...</p>
+        </div>
+    </div>
+
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <!-- EmailJS Konfiguration -->
+    <script src="emailjs-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
+

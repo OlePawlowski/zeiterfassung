@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Zeiterfassung</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <h1>🔐 Admin Login</h1>
+            <p class="login-subtitle">Zugang für Karim</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="adminPassword">Passwort</label>
+                    <input type="password" id="adminPassword" name="adminPassword" placeholder="Passwort eingeben" required autofocus style="width: 100%; padding: 14px 16px; background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; font-size: 1rem; color: #FFFFFF; font-family: inherit; box-sizing: border-box;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Anmelden</button>
+            </form>
+            <p class="login-hint">Standard-Passwort: admin123<br>(Bitte in Produktion ändern!)</p>
+            <a href="index.html" class="back-link">← Zurück zur Mitarbeiter-Ansicht</a>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard (versteckt bis Login) -->
+    <div id="adminDashboard" class="admin-dashboard hidden">
+        <div class="container">
+            <header>
+                <div class="header-content">
+                    <div>
+                        <h1>📊 Admin Dashboard</h1>
+                        <p class="subtitle">Übersicht aller Fahrten</p>
+                    </div>
+                    <div class="admin-actions">
+                        <button id="logoutBtn" class="btn btn-secondary">Abmelden</button>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <!-- Statistik Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalEntries">0</div>
+                        <div class="stat-label">Gesamt Einträge</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalEmployees">0</div>
+                        <div class="stat-label">Mitarbeiter</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="thisMonthEntries">0</div>
+                        <div class="stat-label">Diesen Monat</div>
+                    </div>
+                </div>
+
+                <!-- Filter Section -->
+                <section class="filter-section-admin">
+                    <h3>Filter</h3>
+                    <div class="filter-grid">
+                        <div class="form-group">
+                            <label for="filterEmployee">Mitarbeiter</label>
+                            <select id="filterEmployee" class="filter-select">
+                                <option value="">Alle Mitarbeiter</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="filterDateFrom">Von Datum</label>
+                            <input type="date" id="filterDateFrom" class="filter-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="filterDateTo">Bis Datum</label>
+                            <input type="date" id="filterDateTo" class="filter-input">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <div class="filter-buttons">
+                                <button id="applyFilterBtn" class="btn btn-primary">Filter anwenden</button>
+                                <button id="resetFilterBtn" class="btn btn-secondary">Zurücksetzen</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Entries Table -->
+                <section class="entries-section-admin">
+                    <div class="section-header">
+                        <h2>Alle Fahrten</h2>
+                        <div class="action-buttons">
+                            <button id="adminExportBtn" class="btn btn-outline">📥 Exportieren</button>
+                        </div>
+                    </div>
+
+                    <div id="adminEntriesTable" class="table-container">
+                        <table id="adminTableContent">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Mitarbeiter</th>
+                                    <th>E-Mail</th>
+                                    <th>Strecke</th>
+                                    <th>Einfach</th>
+                                    <th>Hin & zurück</th>
+                                    <th>Bemerkung</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminEntriesBody">
+                                <!-- Einträge werden hier dynamisch eingefügt -->
+                            </tbody>
+                        </table>
+                        <p id="adminNoEntries" class="no-entries">Noch keine Einträge vorhanden.</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
+
