@@ -91,7 +91,7 @@ function updateUserInfoDisplay() {
         const userName = getUserName();
         const userEmail = getUserEmail();
         if (userName && userEmail) {
-            userInfoDisplay.textContent = `👤 ${userName}`;
+            userInfoDisplay.textContent = userName;
             userInfoDisplay.style.color = 'var(--text-secondary)';
             userInfoDisplay.style.fontSize = '0.9rem';
             userInfoDisplay.style.marginRight = '10px';

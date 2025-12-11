@@ -184,6 +184,15 @@ async function renderAdminDashboard() {
         const allEntries = await loadAllEntries();
         console.log('Einträge geladen:', allEntries.length); // Debug
         
+        // Debug: Zeige alle Mitarbeiter-Namen und E-Mails
+        const uniqueEmployees = new Set(
+            allEntries
+                .filter(e => e.employeeName && e.employeeName !== 'Unbekannt')
+                .map(e => `${e.employeeName} (${e.employeeEmail || 'keine E-Mail'})`)
+        );
+        console.log('Eindeutige Mitarbeiter gefunden:', Array.from(uniqueEmployees)); // Debug
+        console.log('Anzahl eindeutiger Mitarbeiter:', uniqueEmployees.size); // Debug
+        
         const filteredEntries = applyFilters(allEntries);
         console.log('Einträge gefiltert:', filteredEntries.length); // Debug
         
@@ -270,25 +279,51 @@ function updateEmployeeList(allEntries) {
     
     const currentValue = employeeSelect.value;
     
-    // Alle Mitarbeiter-Namen sammeln (nur gültige Namen)
-    const employees = [...new Set(
-        allEntries
-            .map(e => e.employeeName)
-            .filter(name => name && name !== 'Unbekannt')
-    )].sort();
+    // Alle eindeutigen Mitarbeiter sammeln (Name + E-Mail Kombination)
+    // Verwende ein Set mit einem eindeutigen Schlüssel (Name + E-Mail)
+    const employeeMap = new Map();
+    
+    allEntries.forEach(entry => {
+        if (entry.employeeName && entry.employeeName !== 'Unbekannt') {
+            // Erstelle einen eindeutigen Schlüssel aus Name + E-Mail
+            const key = entry.employeeEmail 
+                ? `${entry.employeeName} (${entry.employeeEmail})`
+                : entry.employeeName;
+            
+            // Speichere den vollständigen Namen für die Anzeige
+            if (!employeeMap.has(key)) {
+                employeeMap.set(key, {
+                    displayName: entry.employeeEmail 
+                        ? `${entry.employeeName} (${entry.employeeEmail})`
+                        : entry.employeeName,
+                    filterName: entry.employeeName, // Für Filter verwenden wir nur den Namen
+                    email: entry.employeeEmail
+                });
+            }
+        }
+    });
+    
+    // Sortiere nach Anzeigename
+    const employees = Array.from(employeeMap.values())
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
     
     // Select-Optionen aktualisieren
     employeeSelect.innerHTML = '<option value="">Alle Mitarbeiter</option>';
     employees.forEach(employee => {
         const option = document.createElement('option');
-        option.value = employee;
-        option.textContent = employee;
+        option.value = employee.filterName; // Filter verwendet nur den Namen
+        option.textContent = employee.displayName; // Anzeige zeigt Name + E-Mail
         employeeSelect.appendChild(option);
     });
     
     // Vorherigen Wert wiederherstellen
-    if (currentValue && employees.includes(currentValue)) {
-        employeeSelect.value = currentValue;
+    if (currentValue) {
+        const matchingOption = Array.from(employeeSelect.options).find(
+            opt => opt.value === currentValue
+        );
+        if (matchingOption) {
+            employeeSelect.value = currentValue;
+        }
     }
 }
 
@@ -315,6 +350,7 @@ function renderAdminTable(entries) {
         const employeeEmail = entry.employeeEmail || '-';
         const strecke = entry.strecke || '-';
         const bemerkung = entry.bemerkung || '-';
+        const entryId = entry.id || entry._id;
         
         return `
             <tr>
@@ -325,6 +361,11 @@ function renderAdminTable(entries) {
                 <td>${entry.einfach ? '<span class="check-icon">✓</span>' : ''}</td>
                 <td>${entry.hinZurueck ? '<span class="check-icon">✓</span>' : ''}</td>
                 <td>${escapeHtml(bemerkung)}</td>
+                <td>
+                    <button class="btn-icon btn-delete" onclick="deleteAdminEntry('${entryId}')" title="Eintrag löschen">
+                        Löschen
+                    </button>
+                </td>
             </tr>
         `;
     }).join('');
@@ -342,6 +383,25 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Admin: Eintrag löschen (global verfügbar für onclick)
+window.deleteAdminEntry = async function(entryId) {
+    if (!entryId) {
+        alert('Fehler: Eintrag-ID nicht gefunden.');
+        return;
+    }
+    
+    if (confirm('Möchten Sie diesen Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+        try {
+            await window.apiClient.deleteEntry(entryId);
+            // Dashboard neu laden
+            await renderAdminDashboard();
+        } catch (error) {
+            console.error('Fehler beim Löschen:', error);
+            alert('Fehler beim Löschen: ' + error.message);
+        }
+    }
 }
 
 // Export-Funktion

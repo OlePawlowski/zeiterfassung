@@ -144,7 +144,6 @@ header h1 {
 
 main {
     display: grid;
-    grid-template-columns: 1fr 2fr;
     gap: 24px;
     margin-bottom: 30px;
 }
@@ -516,7 +515,13 @@ tbody tr:last-child td {
 }
 
 .btn-delete {
-    /* Keine spezielle Farbe - nur transparent */
+    background: rgba(255, 0, 0, 0.1);
+    border-color: rgba(255, 0, 0, 0.2);
+}
+
+.btn-delete:hover {
+    background: rgba(255, 0, 0, 0.15);
+    border-color: rgba(255, 0, 0, 0.3);
 }
 
 .no-entries {
@@ -872,7 +877,9 @@ input[type="checkbox"]:checked::after {
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     padding: 32px;
+    min-height: 600px;
 }
+
 
 @media (max-width: 768px) {
     .stats-grid {
