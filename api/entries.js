@@ -60,13 +60,22 @@ module.exports = async (req, res) => {
         }
 
         const entries = await collection.find(query).sort({ datum: -1 }).toArray();
-        res.status(200).json({ success: true, data: entries });
+        // MongoDB _id in id umwandeln
+        const normalizedEntries = entries.map(entry => {
+          const { _id, ...rest } = entry;
+          return {
+            ...rest,
+            id: entry.id || _id.toString()
+          };
+        });
+        res.status(200).json({ success: true, data: normalizedEntries });
         break;
 
       case 'POST':
         // Neuen Eintrag erstellen
         const newEntry = {
           ...req.body,
+          id: req.body.id || Date.now().toString(), // ID generieren falls nicht vorhanden
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -77,22 +86,40 @@ module.exports = async (req, res) => {
       case 'PUT':
         // Eintrag aktualisieren
         const { id, ...updateData } = req.body;
+        // Suche nach id oder _id (für Rückwärtskompatibilität)
+        const updateQuery = { $or: [{ id: id }, { _id: id }] };
         const updateResult = await collection.updateOne(
-          { id: id },
+          updateQuery,
           { 
             $set: { 
               ...updateData,
+              id: id, // ID sicherstellen
               updatedAt: new Date().toISOString()
             } 
           }
         );
-        res.status(200).json({ success: true, data: updateResult });
+        
+        if (updateResult.matchedCount === 0) {
+          return res.status(404).json({ success: false, error: 'Eintrag nicht gefunden' });
+        }
+        
+        // Aktualisierten Eintrag zurückgeben
+        const updatedEntry = await collection.findOne(updateQuery);
+        const { _id: updatedId, ...updatedRest } = updatedEntry;
+        res.status(200).json({ success: true, data: { ...updatedRest, id: updatedEntry.id || updatedId.toString() } });
         break;
 
       case 'DELETE':
         // Eintrag löschen
         const { entryId } = req.query;
-        await collection.deleteOne({ id: entryId });
+        // Suche nach id oder _id (für Rückwärtskompatibilität)
+        const deleteQuery = { $or: [{ id: entryId }, { _id: entryId }] };
+        const deleteResult = await collection.deleteOne(deleteQuery);
+        
+        if (deleteResult.deletedCount === 0) {
+          return res.status(404).json({ success: false, error: 'Eintrag nicht gefunden' });
+        }
+        
         res.status(200).json({ success: true });
         break;
 

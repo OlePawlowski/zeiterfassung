@@ -4,11 +4,11 @@ const ADMIN_STORAGE_KEY = 'zeiterfassung_admin_logged_in';
 const ALL_ENTRIES_STORAGE_KEY = 'zeiterfassung_all_entries'; // Zentrale Speicherung aller Einträge
 
 // Login-Funktionalität
-function initAdmin() {
+async function initAdmin() {
     console.log('Admin initialisiert'); // Debug
     checkLoginStatus();
     setupAdminListeners();
-    loadAllEntries();
+    // Einträge werden in renderAdminDashboard geladen
 }
 
 // Warten bis DOM vollständig geladen ist
@@ -19,10 +19,10 @@ if (document.readyState === 'loading') {
     initAdmin();
 }
 
-function checkLoginStatus() {
+async function checkLoginStatus() {
     const isLoggedIn = sessionStorage.getItem(ADMIN_STORAGE_KEY) === 'true';
     if (isLoggedIn) {
-        showAdminDashboard();
+        await showAdminDashboard();
     } else {
         showLoginScreen();
     }
@@ -43,7 +43,7 @@ function showLoginScreen() {
     }
 }
 
-function showAdminDashboard() {
+async function showAdminDashboard() {
     console.log('showAdminDashboard aufgerufen'); // Debug
     
     const loginScreen = document.getElementById('loginScreen');
@@ -74,7 +74,7 @@ function showAdminDashboard() {
     console.log('adminDashboard display:', adminDashboard.style.display); // Debug
     
     try {
-        renderAdminDashboard();
+        await renderAdminDashboard();
         console.log('Dashboard erfolgreich gerendert'); // Debug
     } catch (error) {
         console.error('Fehler beim Rendern des Dashboards:', error);
@@ -143,15 +143,15 @@ function setupAdminListeners() {
         document.getElementById('loginForm').reset();
     });
 
-    applyFilterBtn.addEventListener('click', () => {
-        renderAdminDashboard();
+    applyFilterBtn.addEventListener('click', async () => {
+        await renderAdminDashboard();
     });
 
-    resetFilterBtn.addEventListener('click', () => {
+    resetFilterBtn.addEventListener('click', async () => {
         document.getElementById('filterEmployee').value = '';
         document.getElementById('filterDateFrom').value = '';
         document.getElementById('filterDateTo').value = '';
-        renderAdminDashboard();
+        await renderAdminDashboard();
     });
 
     adminExportBtn.addEventListener('click', () => {
@@ -159,23 +159,29 @@ function setupAdminListeners() {
     });
 }
 
-// Alle Einträge laden (aus zentralem Storage)
-function loadAllEntries() {
-    const stored = localStorage.getItem(ALL_ENTRIES_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+// Alle Einträge laden (von API)
+async function loadAllEntries() {
+    try {
+        const allEntries = await window.apiClient.fetchEntries();
+        return allEntries || [];
+    } catch (error) {
+        console.error('Fehler beim Laden der Einträge:', error);
+        return [];
+    }
 }
 
-// Alle Einträge speichern
+// Alle Einträge speichern (nicht mehr benötigt, da direkt API verwendet wird)
 function saveAllEntries(entries) {
-    localStorage.setItem(ALL_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
+    // Diese Funktion wird nicht mehr verwendet
+    console.warn('saveAllEntries wird nicht mehr verwendet - API wird direkt verwendet');
 }
 
 // Admin Dashboard rendern
-function renderAdminDashboard() {
+async function renderAdminDashboard() {
     console.log('renderAdminDashboard aufgerufen'); // Debug
     
     try {
-        const allEntries = loadAllEntries();
+        const allEntries = await loadAllEntries();
         console.log('Einträge geladen:', allEntries.length); // Debug
         
         const filteredEntries = applyFilters(allEntries);
@@ -339,8 +345,8 @@ function escapeHtml(text) {
 }
 
 // Export-Funktion
-function exportAllEntries() {
-    const allEntries = loadAllEntries();
+async function exportAllEntries() {
+    const allEntries = await loadAllEntries();
     const filteredEntries = applyFilters(allEntries);
     
     if (filteredEntries.length === 0) {

@@ -24,13 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Login-Status prüfen
-function checkEmployeeLoginStatus() {
+async function checkEmployeeLoginStatus() {
     const isLoggedIn = sessionStorage.getItem(USER_LOGGED_IN_KEY) === 'true';
     const userName = getUserName();
     const userEmail = getUserEmail();
     
     if (isLoggedIn && userName && userEmail) {
         showMainApp();
+        // Einträge laden
+        await loadEntries();
     } else {
         showLoginScreen();
     }
@@ -177,7 +179,7 @@ function setupEventListeners() {
     });
     
     // Employee Login Handler
-    function handleEmployeeLogin() {
+    async function handleEmployeeLogin() {
         const nameInput = document.getElementById('loginName');
         const emailInput = document.getElementById('loginEmail');
         
@@ -199,13 +201,24 @@ function setupEventListeners() {
             return;
         }
         
-        // Benutzer-Info speichern
-        saveUserName(name);
-        saveUserEmail(email);
-        sessionStorage.setItem(USER_LOGGED_IN_KEY, 'true');
-        
-        // Haupt-App anzeigen
-        showMainApp();
+        try {
+            // API Login aufrufen
+            const userData = await window.apiClient.loginEmployee(name, email);
+            
+            // Benutzer-Info speichern
+            saveUserName(userData.name);
+            saveUserEmail(userData.email);
+            sessionStorage.setItem(USER_LOGGED_IN_KEY, 'true');
+            
+            // Einträge von der API laden
+            await loadEntries();
+            
+            // Haupt-App anzeigen
+            showMainApp();
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Fehler beim Anmelden: ' + error.message);
+        }
     }
     
     // Employee Logout Handler
@@ -229,7 +242,7 @@ function setupEventListeners() {
 }
 
 // Formular absenden
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     e.preventDefault();
     
     // Mitarbeiter-Info abrufen
@@ -249,14 +262,9 @@ function handleFormSubmit(e) {
         einfach: document.getElementById('einfach').checked,
         hinZurueck: document.getElementById('hinZurueck').checked,
         bemerkung: document.getElementById('bemerkung').value.trim(),
-        id: editingIndex !== null ? entries[editingIndex].id : Date.now(),
         // Mitarbeiter-Info hinzufügen (immer aktuelle Info verwenden)
         employeeName: employeeName,
-        employeeEmail: employeeEmail,
-        createdAt: editingIndex !== null 
-            ? (entries[editingIndex].createdAt || new Date().toISOString())
-            : new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        employeeEmail: employeeEmail
     };
     
     // Validierung: Mindestens eine Fahrtart muss ausgewählt sein
@@ -265,23 +273,29 @@ function handleFormSubmit(e) {
         return;
     }
     
-    if (editingIndex !== null) {
-        // Bearbeitung - alte ID beibehalten
-        const oldEntry = entries[editingIndex];
-        formData.id = oldEntry.id; // ID beibehalten
-        entries[editingIndex] = formData;
-        editingIndex = null;
-        document.querySelector('.form-section h2').textContent = 'Neuer Eintrag';
-        document.querySelector('.btn-primary').textContent = 'Eintrag hinzufügen';
-    } else {
-        // Neuer Eintrag
-        entries.push(formData);
+    try {
+        if (editingIndex !== null) {
+            // Bearbeitung - Eintrag aktualisieren
+            const oldEntry = entries[editingIndex];
+            formData.id = oldEntry.id; // ID beibehalten
+            
+            await window.apiClient.updateEntry(oldEntry.id, formData);
+            
+            editingIndex = null;
+            document.querySelector('.form-section h2').textContent = 'Neuer Eintrag';
+            document.querySelector('.btn-primary').textContent = 'Eintrag hinzufügen';
+        } else {
+            // Neuer Eintrag erstellen
+            await window.apiClient.createEntry(formData);
+        }
+        
+        // Einträge neu laden
+        await loadEntries();
+        clearForm();
+    } catch (error) {
+        console.error('Fehler beim Speichern:', error);
+        alert('Fehler beim Speichern: ' + error.message);
     }
-    
-    saveEntries();
-    saveToCentralStorage(formData); // In zentralen Storage speichern (aktualisiert auch bei Bearbeitung)
-    renderEntries();
-    clearForm();
 }
 
 // Formular leeren
@@ -313,44 +327,50 @@ function editEntry(index) {
 }
 
 // Eintrag löschen
-function deleteEntry(index) {
+async function deleteEntry(index) {
     if (confirm('Möchten Sie diesen Eintrag wirklich löschen?')) {
         const entryToDelete = entries[index];
-        entries.splice(index, 1);
-        saveEntries();
         
-        // Auch aus zentralem Storage löschen
-        const allEntries = loadAllEntries();
-        const centralIndex = allEntries.findIndex(e => e.id === entryToDelete.id);
-        if (centralIndex !== -1) {
-            allEntries.splice(centralIndex, 1);
-            localStorage.setItem(ALL_ENTRIES_STORAGE_KEY, JSON.stringify(allEntries));
+        try {
+            await window.apiClient.deleteEntry(entryToDelete.id);
+            // Einträge neu laden
+            await loadEntries();
+        } catch (error) {
+            console.error('Fehler beim Löschen:', error);
+            alert('Fehler beim Löschen: ' + error.message);
         }
-        
-        renderEntries();
     }
 }
 
 // Alle Einträge löschen
-function clearAllEntries() {
+async function clearAllEntries() {
     if (confirm('Möchten Sie wirklich alle Einträge löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
-        entries = [];
-        saveEntries();
-        
-        // Auch zentrale Einträge löschen (nur die des aktuellen Mitarbeiters)
-        const allEntries = loadAllEntries();
         const currentEmployeeName = getUserName();
         const currentEmployeeEmail = getUserEmail();
         
-        // Nur Einträge des aktuellen Mitarbeiters aus zentralem Storage entfernen
-        const filteredEntries = allEntries.filter(entry => 
-            entry.employeeName !== currentEmployeeName || 
-            entry.employeeEmail !== currentEmployeeEmail
-        );
+        if (!currentEmployeeName || !currentEmployeeEmail) {
+            alert('Fehler: Benutzer-Informationen nicht gefunden.');
+            return;
+        }
         
-        localStorage.setItem(ALL_ENTRIES_STORAGE_KEY, JSON.stringify(filteredEntries));
-        
-        renderEntries();
+        try {
+            // Alle Einträge des aktuellen Mitarbeiters löschen
+            const userEntries = entries.filter(e => 
+                e.employeeName === currentEmployeeName && 
+                e.employeeEmail === currentEmployeeEmail
+            );
+            
+            // Alle Einträge einzeln löschen
+            for (const entry of userEntries) {
+                await window.apiClient.deleteEntry(entry.id);
+            }
+            
+            // Einträge neu laden
+            await loadEntries();
+        } catch (error) {
+            console.error('Fehler beim Löschen:', error);
+            alert('Fehler beim Löschen: ' + error.message);
+        }
     }
 }
 
@@ -421,31 +441,30 @@ function saveEntries() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
-// Einträge laden
-function loadEntries() {
-    // Zuerst versuchen, lokale Einträge zu laden (für Rückwärtskompatibilität)
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        entries = JSON.parse(stored);
-    }
-    
-    // Dann Einträge des aktuellen Benutzers aus zentralem Storage laden
+// Einträge laden (von API)
+async function loadEntries() {
     const userName = getUserName();
     const userEmail = getUserEmail();
     
-    if (userName && userEmail) {
-        // Einträge des aktuellen Benutzers aus zentralem Storage filtern
-        const allEntries = loadAllEntries();
-        const userEntries = allEntries.filter(entry => 
-            entry.employeeName === userName && entry.employeeEmail === userEmail
-        );
+    if (!userName || !userEmail) {
+        entries = [];
+        renderEntries();
+        return;
+    }
+    
+    try {
+        // Einträge des aktuellen Benutzers von der API laden
+        const userEntries = await window.apiClient.fetchEntries({
+            employeeName: userName,
+            employeeEmail: userEmail
+        });
         
-        // Wenn Einträge im zentralen Storage gefunden wurden, diese verwenden
-        if (userEntries.length > 0) {
-            entries = userEntries;
-            // Lokale Einträge synchronisieren
-            saveEntries();
-        }
+        entries = userEntries || [];
+        renderEntries();
+    } catch (error) {
+        console.error('Fehler beim Laden der Einträge:', error);
+        entries = [];
+        renderEntries();
     }
 }
 
