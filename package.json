@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "description": "Zeiterfassungs-App für Spedition",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'No build step needed'"
+    "dev": "vercel dev"
   },
   "dependencies": {
-    "@vercel/kv": "^0.2.0"
+    "mongodb": "^6.3.0"
   },
   "devDependencies": {
     "@vercel/node": "^3.0.0"

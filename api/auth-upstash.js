@@ -1,32 +1,12 @@
-// Vercel Serverless Function für Authentifizierung mit MongoDB Atlas
-const { MongoClient } = require('mongodb');
+// Vercel Serverless Function mit Upstash Redis
+// Upstash ist über Vercel Marketplace verfügbar
 
-const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DB = process.env.MONGODB_DB || 'zeiterfassung';
+const { Redis } = require('@upstash/redis');
 
-let cachedClient = null;
-let cachedDb = null;
-
-async function connectToDatabase() {
-  if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
-  }
-
-  if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI Umgebungsvariable fehlt!');
-  }
-
-  const client = await MongoClient.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const db = client.db(MONGODB_DB);
-  cachedClient = client;
-  cachedDb = db;
-
-  return { client, db };
-}
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 module.exports = async (req, res) => {
   // CORS Headers
@@ -41,19 +21,17 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { client, db } = await connectToDatabase();
-    const collection = db.collection('users');
+    const USERS_KEY = 'zeiterfassung:users';
 
     if (req.method === 'POST') {
-      // Login oder Registrierung
       const { name, email, action } = req.body;
 
       if (!name || !email) {
         return res.status(400).json({ success: false, error: 'Name und E-Mail sind erforderlich' });
       }
 
-      // Prüfen ob Benutzer existiert
-      let user = await collection.findOne({ email: email });
+      let users = await redis.get(USERS_KEY) || [];
+      let user = users.find(u => u.email === email);
 
       if (action === 'register' || !user) {
         // Neuen Benutzer erstellen
@@ -63,13 +41,14 @@ module.exports = async (req, res) => {
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString()
         };
-        await collection.insertOne(user);
+        users.push(user);
+        await redis.set(USERS_KEY, users);
       } else {
         // Login - letztes Login aktualisieren
-        await collection.updateOne(
-          { email: email },
-          { $set: { lastLogin: new Date().toISOString() } }
-        );
+        user.lastLogin = new Date().toISOString();
+        const userIndex = users.findIndex(u => u.email === email);
+        users[userIndex] = user;
+        await redis.set(USERS_KEY, users);
       }
 
       res.status(200).json({ 
@@ -83,7 +62,8 @@ module.exports = async (req, res) => {
       res.status(405).json({ success: false, error: 'Method not allowed' });
     }
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Auth error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
+

@@ -1,8 +1,6 @@
-# Vercel + MongoDB Setup-Anleitung
+# Vercel + MongoDB Atlas Setup-Anleitung
 
-> **💡 EINFACHERE LÖSUNG:** Siehe `VERCEL-EINFACH.md` für Vercel KV (keine externe Datenbank nötig!)
-
-# Vercel + MongoDB Setup-Anleitung
+**Diese Anleitung zeigt, wie Sie MongoDB Atlas mit Vercel verbinden.**
 
 ## Übersicht
 

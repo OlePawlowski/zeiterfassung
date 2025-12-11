@@ -1,7 +1,33 @@
-// Vercel Serverless Function - Einfache Lösung ohne externe Datenbank
-// Verwendet Vercel KV (Key-Value Store) - direkt in Vercel verfügbar
+// Vercel Serverless Function für Einträge mit MongoDB Atlas
+const { MongoClient } = require('mongodb');
 
-const { kv } = require('@vercel/kv');
+// MongoDB Connection String aus Umgebungsvariablen
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB || 'zeiterfassung';
+
+let cachedClient = null;
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb };
+  }
+
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI Umgebungsvariable fehlt!');
+  }
+
+  const client = await MongoClient.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const db = client.db(MONGODB_DB);
+  cachedClient = client;
+  cachedDb = db;
+
+  return { client, db };
+}
 
 module.exports = async (req, res) => {
   // CORS Headers
@@ -16,31 +42,24 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const ENTRIES_KEY = 'zeiterfassung:entries';
+    const { client, db } = await connectToDatabase();
+    const collection = db.collection('entries');
 
     switch (req.method) {
       case 'GET':
-        // Alle Einträge abrufen
-        let entries = await kv.get(ENTRIES_KEY) || [];
-        
-        // Filter anwenden
+        // Alle Einträge abrufen (mit optionalen Filtern)
         const { employeeName, employeeEmail, dateFrom, dateTo } = req.query;
-        if (employeeName) {
-          entries = entries.filter(e => e.employeeName === employeeName);
-        }
-        if (employeeEmail) {
-          entries = entries.filter(e => e.employeeEmail === employeeEmail);
-        }
-        if (dateFrom) {
-          entries = entries.filter(e => e.datum >= dateFrom);
-        }
-        if (dateTo) {
-          entries = entries.filter(e => e.datum <= dateTo);
-        }
+        let query = {};
         
-        // Sortieren nach Datum (neueste zuerst)
-        entries.sort((a, b) => new Date(b.datum) - new Date(a.datum));
-        
+        if (employeeName) query.employeeName = employeeName;
+        if (employeeEmail) query.employeeEmail = employeeEmail;
+        if (dateFrom || dateTo) {
+          query.datum = {};
+          if (dateFrom) query.datum.$gte = dateFrom;
+          if (dateTo) query.datum.$lte = dateTo;
+        }
+
+        const entries = await collection.find(query).sort({ datum: -1 }).toArray();
         res.status(200).json({ success: true, data: entries });
         break;
 
@@ -48,44 +67,32 @@ module.exports = async (req, res) => {
         // Neuen Eintrag erstellen
         const newEntry = {
           ...req.body,
-          id: req.body.id || Date.now().toString(),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        
-        entries = await kv.get(ENTRIES_KEY) || [];
-        entries.push(newEntry);
-        await kv.set(ENTRIES_KEY, entries);
-        
-        res.status(201).json({ success: true, data: newEntry });
+        const result = await collection.insertOne(newEntry);
+        res.status(201).json({ success: true, data: { ...newEntry, _id: result.insertedId } });
         break;
 
       case 'PUT':
         // Eintrag aktualisieren
         const { id, ...updateData } = req.body;
-        entries = await kv.get(ENTRIES_KEY) || [];
-        const index = entries.findIndex(e => e.id === id);
-        
-        if (index !== -1) {
-          entries[index] = {
-            ...entries[index],
-            ...updateData,
-            updatedAt: new Date().toISOString()
-          };
-          await kv.set(ENTRIES_KEY, entries);
-          res.status(200).json({ success: true, data: entries[index] });
-        } else {
-          res.status(404).json({ success: false, error: 'Eintrag nicht gefunden' });
-        }
+        const updateResult = await collection.updateOne(
+          { id: id },
+          { 
+            $set: { 
+              ...updateData,
+              updatedAt: new Date().toISOString()
+            } 
+          }
+        );
+        res.status(200).json({ success: true, data: updateResult });
         break;
 
       case 'DELETE':
         // Eintrag löschen
         const { entryId } = req.query;
-        entries = await kv.get(ENTRIES_KEY) || [];
-        entries = entries.filter(e => e.id !== entryId);
-        await kv.set(ENTRIES_KEY, entries);
-        
+        await collection.deleteOne({ id: entryId });
         res.status(200).json({ success: true });
         break;
 
@@ -93,8 +100,7 @@ module.exports = async (req, res) => {
         res.status(405).json({ success: false, error: 'Method not allowed' });
     }
   } catch (error) {
-    console.error('API error:', error);
+    console.error('Database error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
-
