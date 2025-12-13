@@ -607,17 +607,29 @@ function showExportModal() {
 // CSV-Datei erstellen
 function createCSVBlob() {
     const headers = ['Datum', 'Strecke', 'Einfach', 'Hin & zurück', 'Bemerkung'];
+    
+    // Hilfsfunktion zum Escapen von CSV-Werten
+    function escapeCSV(value) {
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        // Wenn der Wert Kommas, Anführungszeichen oder Zeilenumbrüche enthält, in Anführungszeichen setzen
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+            return '"' + stringValue.replace(/"/g, '""') + '"';
+        }
+        return stringValue;
+    }
+    
     const rows = entries.map(entry => [
         formatDate(entry.datum),
-        entry.strecke,
+        entry.strecke || '',
         entry.einfach ? 'x' : '',
         entry.hinZurueck ? 'x' : '',
         entry.bemerkung || ''
     ]);
     
     const csvContent = [
-        headers.join(';'),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+        headers.join(','),
+        ...rows.map(row => row.map(cell => escapeCSV(cell)).join(','))
     ].join('\n');
     
     const BOM = '\uFEFF';
