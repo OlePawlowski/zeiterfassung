@@ -46,12 +46,12 @@ module.exports = async (req, res) => {
     const collection = db.collection('users');
 
     if (req.method === 'POST') {
-      const { name, email, password, action } = req.body;
+      const { name, password, action } = req.body;
 
       if (action === 'register') {
         // Registrierung
-        if (!name || !email || !password) {
-          return res.status(400).json({ success: false, error: 'Name, E-Mail und Passwort sind erforderlich' });
+        if (!name || !password) {
+          return res.status(400).json({ success: false, error: 'Name und Passwort sind erforderlich' });
         }
 
         if (password.length < 6) {
@@ -59,9 +59,9 @@ module.exports = async (req, res) => {
         }
 
         // Prüfen ob Benutzer bereits existiert
-        const existingUser = await collection.findOne({ email: email });
+        const existingUser = await collection.findOne({ name: name });
         if (existingUser) {
-          return res.status(400).json({ success: false, error: 'Ein Benutzer mit dieser E-Mail existiert bereits' });
+          return res.status(400).json({ success: false, error: 'Ein Benutzer mit diesem Namen existiert bereits' });
         }
 
         // Passwort hashen
@@ -70,7 +70,6 @@ module.exports = async (req, res) => {
         // Neuen Benutzer erstellen
         const newUser = {
           name: name,
-          email: email,
           password: hashedPassword,
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString()
@@ -80,39 +79,37 @@ module.exports = async (req, res) => {
         res.status(201).json({ 
           success: true, 
           data: { 
-            name: newUser.name, 
-            email: newUser.email 
+            name: newUser.name
           } 
         });
       } else if (action === 'login') {
         // Login
-        if (!email || !password) {
-          return res.status(400).json({ success: false, error: 'E-Mail und Passwort sind erforderlich' });
+        if (!name || !password) {
+          return res.status(400).json({ success: false, error: 'Name und Passwort sind erforderlich' });
         }
 
         // Benutzer finden
-        const user = await collection.findOne({ email: email });
+        const user = await collection.findOne({ name: name });
         if (!user) {
-          return res.status(401).json({ success: false, error: 'Ungültige E-Mail oder Passwort' });
+          return res.status(401).json({ success: false, error: 'Ungültiger Name oder Passwort' });
         }
 
         // Passwort prüfen
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
-          return res.status(401).json({ success: false, error: 'Ungültige E-Mail oder Passwort' });
+          return res.status(401).json({ success: false, error: 'Ungültiger Name oder Passwort' });
         }
 
         // Letztes Login aktualisieren
         await collection.updateOne(
-          { email: email },
+          { name: name },
           { $set: { lastLogin: new Date().toISOString() } }
         );
 
         res.status(200).json({ 
           success: true, 
           data: { 
-            name: user.name, 
-            email: user.email 
+            name: user.name
           } 
         });
       } else {

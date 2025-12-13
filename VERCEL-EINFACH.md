@@ -125,3 +125,4 @@ Oder die MongoDB-Versionen löschen und die einfachen Versionen behalten.
 
 Wenn Sie später mehr Daten haben (>256MB), können Sie immer noch auf MongoDB Atlas wechseln. Die API-Struktur bleibt gleich!
 
+

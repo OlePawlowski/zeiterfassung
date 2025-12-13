@@ -129,3 +129,4 @@ mv api/auth-file.js api/auth.js
 
 Nach dem Setup funktioniert alles automatisch. Die Daten werden in Upstash Redis gespeichert!
 
+

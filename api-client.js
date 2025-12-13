@@ -14,7 +14,7 @@ const API_BASE = window.location.origin; // Automatisch: https://ihre-app.vercel
 /**
  * Mitarbeiter anmelden
  */
-async function loginEmployee(email, password) {
+async function loginEmployee(name, password) {
     try {
         const response = await fetch(`${API_BASE}/api/auth`, {
             method: 'POST',
@@ -22,7 +22,7 @@ async function loginEmployee(email, password) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                email: email,
+                name: name,
                 password: password,
                 action: 'login'
             })
@@ -44,7 +44,7 @@ async function loginEmployee(email, password) {
 /**
  * Mitarbeiter registrieren
  */
-async function registerEmployee(name, email, password) {
+async function registerEmployee(name, password) {
     try {
         const response = await fetch(`${API_BASE}/api/auth`, {
             method: 'POST',
@@ -53,7 +53,6 @@ async function registerEmployee(name, email, password) {
             },
             body: JSON.stringify({
                 name: name,
-                email: email,
                 password: password,
                 action: 'register'
             })

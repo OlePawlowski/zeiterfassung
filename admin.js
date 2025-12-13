@@ -184,11 +184,11 @@ async function renderAdminDashboard() {
         const allEntries = await loadAllEntries();
         console.log('Einträge geladen:', allEntries.length); // Debug
         
-        // Debug: Zeige alle Mitarbeiter-Namen und E-Mails
+        // Debug: Zeige alle Mitarbeiter-Namen
         const uniqueEmployees = new Set(
             allEntries
                 .filter(e => e.employeeName && e.employeeName !== 'Unbekannt')
-                .map(e => `${e.employeeName} (${e.employeeEmail || 'keine E-Mail'})`)
+                .map(e => e.employeeName)
         );
         console.log('Eindeutige Mitarbeiter gefunden:', Array.from(uniqueEmployees)); // Debug
         console.log('Anzahl eindeutiger Mitarbeiter:', uniqueEmployees.size); // Debug
@@ -285,19 +285,14 @@ function updateEmployeeList(allEntries) {
     
     allEntries.forEach(entry => {
         if (entry.employeeName && entry.employeeName !== 'Unbekannt') {
-            // Erstelle einen eindeutigen Schlüssel aus Name + E-Mail
-            const key = entry.employeeEmail 
-                ? `${entry.employeeName} (${entry.employeeEmail})`
-                : entry.employeeName;
+            // Verwende nur den Namen als Schlüssel
+            const key = entry.employeeName;
             
-            // Speichere den vollständigen Namen für die Anzeige
+            // Speichere den Namen für die Anzeige
             if (!employeeMap.has(key)) {
                 employeeMap.set(key, {
-                    displayName: entry.employeeEmail 
-                        ? `${entry.employeeName} (${entry.employeeEmail})`
-                        : entry.employeeName,
-                    filterName: entry.employeeName, // Für Filter verwenden wir nur den Namen
-                    email: entry.employeeEmail
+                    displayName: entry.employeeName,
+                    filterName: entry.employeeName // Für Filter verwenden wir den Namen
                 });
             }
         }
@@ -347,7 +342,6 @@ function renderAdminTable(entries) {
         // Sicherstellen, dass alle Felder vorhanden sind
         const datumFormatted = entry.datum ? formatDate(entry.datum) : '-';
         const employeeName = entry.employeeName || 'Unbekannt';
-        const employeeEmail = entry.employeeEmail || '-';
         const strecke = entry.strecke || '-';
         const bemerkung = entry.bemerkung || '-';
         const entryId = entry.id || entry._id;
@@ -356,7 +350,6 @@ function renderAdminTable(entries) {
             <tr>
                 <td>${datumFormatted}</td>
                 <td>${escapeHtml(employeeName)}</td>
-                <td>${escapeHtml(employeeEmail)}</td>
                 <td>${escapeHtml(strecke)}</td>
                 <td>${entry.einfach ? '<span class="check-icon">✓</span>' : ''}</td>
                 <td>${entry.hinZurueck ? '<span class="check-icon">✓</span>' : ''}</td>
@@ -415,14 +408,12 @@ async function exportAllEntries() {
     }
     
     // CSV-Format erstellen
-    const headers = ['Datum', 'Mitarbeiter', 'E-Mail', 'Strecke', 'Einfach', 'Hin & zurück', 'Bemerkung'];
+    const headers = ['Datum', 'Strecke', 'Einfach', 'Hin & zurück', 'Bemerkung'];
     const rows = filteredEntries.map(entry => [
         formatDate(entry.datum),
-        entry.employeeName || 'Unbekannt',
-        entry.employeeEmail || '',
         entry.strecke,
-        entry.einfach ? 'Ja' : 'Nein',
-        entry.hinZurueck ? 'Ja' : 'Nein',
+        entry.einfach ? 'x' : '',
+        entry.hinZurueck ? 'x' : '',
         entry.bemerkung || ''
     ]);
     

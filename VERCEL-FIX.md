@@ -101,3 +101,4 @@ Falls Vercel KV nicht funktioniert, ist **Supabase** die beste Alternative:
 
 Sie können zwischen den Versionen wechseln, indem Sie die Dateien umbenennen.
 
+

@@ -4,7 +4,6 @@ let editingIndex = null;
 
 // LocalStorage Schlüssel
 const STORAGE_KEY = 'zeiterfassung_entries';
-const USER_EMAIL_KEY = 'zeiterfassung_user_email';
 const USER_NAME_KEY = 'zeiterfassung_user_name';
 const USER_LOGGED_IN_KEY = 'zeiterfassung_user_logged_in'; // Login-Status
 const ALL_ENTRIES_STORAGE_KEY = 'zeiterfassung_all_entries'; // Zentrale Speicherung aller Einträge
@@ -27,9 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
 async function checkEmployeeLoginStatus() {
     const isLoggedIn = sessionStorage.getItem(USER_LOGGED_IN_KEY) === 'true';
     const userName = getUserName();
-    const userEmail = getUserEmail();
     
-    if (isLoggedIn && userName && userEmail) {
+    if (isLoggedIn && userName) {
         showMainApp();
         // Einträge laden
         await loadEntries();
@@ -89,8 +87,7 @@ function updateUserInfoDisplay() {
     const userInfoDisplay = document.getElementById('userInfoDisplay');
     if (userInfoDisplay) {
         const userName = getUserName();
-        const userEmail = getUserEmail();
-        if (userName && userEmail) {
+        if (userName) {
             userInfoDisplay.textContent = userName;
             userInfoDisplay.style.color = 'var(--text-secondary)';
             userInfoDisplay.style.fontSize = '0.9rem';
@@ -216,19 +213,26 @@ function setupEventListeners() {
     
     // Employee Login Handler
     async function handleEmployeeLogin() {
-        const emailInput = document.getElementById('loginEmail');
+        const firstNameInput = document.getElementById('loginFirstName');
+        const lastNameInput = document.getElementById('loginLastName');
         const passwordInput = document.getElementById('loginPassword');
         
-        if (!emailInput || !passwordInput) {
+        if (!firstNameInput || !lastNameInput || !passwordInput) {
             alert('Login-Formular nicht gefunden!');
             return;
         }
         
-        const email = emailInput.value.trim();
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
         const password = passwordInput.value;
         
-        if (!email || !email.includes('@')) {
-            alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+        if (!firstName) {
+            alert('Bitte geben Sie Ihren Vornamen ein.');
+            return;
+        }
+        
+        if (!lastName) {
+            alert('Bitte geben Sie Ihren Nachnamen ein.');
             return;
         }
         
@@ -237,13 +241,14 @@ function setupEventListeners() {
             return;
         }
         
+        const fullName = `${firstName} ${lastName}`;
+        
         try {
             // API Login aufrufen
-            const userData = await window.apiClient.loginEmployee(email, password);
+            const userData = await window.apiClient.loginEmployee(fullName, password);
             
             // Benutzer-Info speichern
             saveUserName(userData.name);
-            saveUserEmail(userData.email);
             sessionStorage.setItem(USER_LOGGED_IN_KEY, 'true');
             
             // Einträge von der API laden
@@ -259,28 +264,28 @@ function setupEventListeners() {
     
     // Registrierungs Handler
     async function handleRegister() {
-        const nameInput = document.getElementById('registerName');
-        const emailInput = document.getElementById('registerEmail');
+        const firstNameInput = document.getElementById('registerFirstName');
+        const lastNameInput = document.getElementById('registerLastName');
         const passwordInput = document.getElementById('registerPassword');
         const passwordConfirmInput = document.getElementById('registerPasswordConfirm');
         
-        if (!nameInput || !emailInput || !passwordInput || !passwordConfirmInput) {
+        if (!firstNameInput || !lastNameInput || !passwordInput || !passwordConfirmInput) {
             alert('Registrierungs-Formular nicht gefunden!');
             return;
         }
         
-        const name = nameInput.value.trim();
-        const email = emailInput.value.trim();
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
         const password = passwordInput.value;
         const passwordConfirm = passwordConfirmInput.value;
         
-        if (!name) {
-            alert('Bitte geben Sie Ihren Namen ein.');
+        if (!firstName) {
+            alert('Bitte geben Sie Ihren Vornamen ein.');
             return;
         }
         
-        if (!email || !email.includes('@')) {
-            alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+        if (!lastName) {
+            alert('Bitte geben Sie Ihren Nachnamen ein.');
             return;
         }
         
@@ -294,15 +299,18 @@ function setupEventListeners() {
             return;
         }
         
+        const fullName = `${firstName} ${lastName}`;
+        
         try {
             // API Registrierung aufrufen
-            const userData = await window.apiClient.registerEmployee(name, email, password);
+            const userData = await window.apiClient.registerEmployee(fullName, password);
             
             // Registrierungs-Modal schließen
             document.getElementById('registerModal').classList.remove('active');
             
-            // Login-Formular mit E-Mail vorausfüllen
-            document.getElementById('loginEmail').value = email;
+            // Login-Formular mit Namen vorausfüllen
+            document.getElementById('loginFirstName').value = firstName;
+            document.getElementById('loginLastName').value = lastName;
             document.getElementById('loginPassword').focus();
             
             alert('Registrierung erfolgreich! Bitte melden Sie sich jetzt an.');
@@ -338,10 +346,9 @@ async function handleFormSubmit(e) {
     
     // Mitarbeiter-Info abrufen
     const employeeName = getUserName();
-    const employeeEmail = getUserEmail();
     
     // Prüfen ob eingeloggt
-    if (!employeeName || !employeeEmail) {
+    if (!employeeName) {
         alert('Bitte melden Sie sich zuerst an.');
         showLoginScreen();
         return;
@@ -354,8 +361,7 @@ async function handleFormSubmit(e) {
         hinZurueck: document.getElementById('hinZurueck').checked,
         bemerkung: document.getElementById('bemerkung').value.trim(),
         // Mitarbeiter-Info hinzufügen (immer aktuelle Info verwenden)
-        employeeName: employeeName,
-        employeeEmail: employeeEmail
+        employeeName: employeeName
     };
     
     // Validierung: Mindestens eine Fahrtart muss ausgewählt sein
@@ -437,9 +443,8 @@ async function deleteEntry(index) {
 async function clearAllEntries() {
     if (confirm('Möchten Sie wirklich alle Einträge löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
         const currentEmployeeName = getUserName();
-        const currentEmployeeEmail = getUserEmail();
         
-        if (!currentEmployeeName || !currentEmployeeEmail) {
+        if (!currentEmployeeName) {
             alert('Fehler: Benutzer-Informationen nicht gefunden.');
             return;
         }
@@ -447,8 +452,7 @@ async function clearAllEntries() {
         try {
             // Alle Einträge des aktuellen Mitarbeiters löschen
             const userEntries = entries.filter(e => 
-                e.employeeName === currentEmployeeName && 
-                e.employeeEmail === currentEmployeeEmail
+                e.employeeName === currentEmployeeName
             );
             
             // Alle Einträge einzeln löschen
@@ -535,9 +539,8 @@ function saveEntries() {
 // Einträge laden (von API)
 async function loadEntries() {
     const userName = getUserName();
-    const userEmail = getUserEmail();
     
-    if (!userName || !userEmail) {
+    if (!userName) {
         entries = [];
         renderEntries();
         return;
@@ -546,8 +549,7 @@ async function loadEntries() {
     try {
         // Einträge des aktuellen Benutzers von der API laden
         const userEntries = await window.apiClient.fetchEntries({
-            employeeName: userName,
-            employeeEmail: userEmail
+            employeeName: userName
         });
         
         entries = userEntries || [];
@@ -559,21 +561,6 @@ async function loadEntries() {
     }
 }
 
-// Benutzer-E-Mail-Adresse laden
-function loadUserEmail() {
-    const stored = localStorage.getItem(USER_EMAIL_KEY);
-    return stored || null;
-}
-
-// Benutzer-E-Mail-Adresse abrufen
-function getUserEmail() {
-    return localStorage.getItem(USER_EMAIL_KEY);
-}
-
-// Benutzer-E-Mail-Adresse speichern
-function saveUserEmail(email) {
-    localStorage.setItem(USER_EMAIL_KEY, email);
-}
 
 // Benutzer-Name speichern
 function saveUserName(name) {
@@ -623,8 +610,8 @@ function createCSVBlob() {
     const rows = entries.map(entry => [
         formatDate(entry.datum),
         entry.strecke,
-        entry.einfach ? 'Ja' : 'Nein',
-        entry.hinZurueck ? 'Ja' : 'Nein',
+        entry.einfach ? 'x' : '',
+        entry.hinZurueck ? 'x' : '',
         entry.bemerkung || ''
     ]);
     
@@ -722,11 +709,10 @@ async function sendEmail() {
         
         // Benutzer-Info abrufen
         const userName = getUserName();
-        const userEmail = getUserEmail();
-        if (!userName || !userEmail) {
+        if (!userName) {
             loadingOverlay.classList.add('hidden');
-            alert('Bitte geben Sie zuerst Ihren Namen und Ihre E-Mail-Adresse in den Einstellungen ein (⚙️ oben rechts).');
-            document.getElementById('settingsBtn').click();
+            alert('Bitte melden Sie sich zuerst an.');
+            showLoginScreen();
             return;
         }
         
@@ -735,13 +721,12 @@ async function sendEmail() {
         const templateParams = {
             to_email: EMAILJS_CONFIG.RECIPIENT_EMAIL,
             subject: `Zeiterfassung - ${new Date().toLocaleDateString('de-DE')} (von ${userName})`,
-            message: `Hallo Karim,\n\nanbei finden Sie die aktuelle Zeiterfassung mit ${entries.length} Einträgen.\n\nDiese E-Mail wurde gesendet von: ${userName} (${userEmail})\n\nDie CSV-Daten sind im E-Mail-Text enthalten.\n\nMit freundlichen Grüßen`,
+            message: `Hallo Karim,\n\nanbei finden Sie die aktuelle Zeiterfassung mit ${entries.length} Einträgen.\n\nDiese E-Mail wurde gesendet von: ${userName}\n\nDie CSV-Daten sind im E-Mail-Text enthalten.\n\nMit freundlichen Grüßen`,
             csv_data: csvText,
             entry_count: entries.length.toString(),
             date: new Date().toLocaleDateString('de-DE'),
             // Mitarbeiter-Info für Identifikation
             user_name: userName,
-            user_email: userEmail,
             // Optional: From Name (wird im EmailJS-Template verwendet)
             from_name: EMAILJS_CONFIG.FROM_NAME || 'Zeiterfassung System'
         };
